@@ -195,6 +195,46 @@ input[type="text"] {
     font-size: 14px;
     margin-top: 5px;
 }
+
+/* 用語解説画面 */
+.explanation-item {
+    margin-bottom: 10px;
+}
+.term-button {
+    background-color: #005a9c;
+    color: white;
+    width: 100%;
+    text-align: left;
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.term-button:hover {
+    background-color: #004a8c;
+}
+.term-button.active + .explanation-details {
+    max-height: 500px; /* 十分な高さを確保 */
+    padding: 15px;
+    border-width: 1px;
+}
+.explanation-details {
+    max-height: 0;
+    overflow: hidden;
+    background-color: #f8f9fa;
+    border: 0px solid #dee2e6;
+    text-align: left;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out, border-width 0.3s ease-out;
+}
+.explanation-details p {
+    margin: 0 0 10px 0;
+}
+.explanation-details ul {
+    margin: 0;
+    padding-left: 20px;
+}
     </style>
 </head>
 <body>
@@ -263,6 +303,7 @@ input[type="text"] {
             <p>◆◇◆◇◆◇◆◇◆◇◆◇◆◇◆</p>
             <button id="restart-button">もう一度プレイ</button>
             <button id="review-button">復習解説を見る</button>
+            <button id="glossary-button">重要用語の解説を見る</button>
         </div>
 
         <!-- 復習画面 -->
@@ -270,6 +311,13 @@ input[type="text"] {
             <h2>復習解説</h2>
             <div id="review-content"></div>
             <button id="back-to-score-button">スコア画面に戻る</button>
+        </div>
+
+        <!-- 用語解説画面 -->
+        <div id="explanation-screen" class="screen">
+            <h2>重要用語 解説</h2>
+            <div id="explanation-list"></div>
+            <button id="back-to-score-from-explanation-button">スコア画面に戻る</button>
         </div>
     </div>
 
@@ -318,6 +366,10 @@ input[type="text"] {
     const reviewScreen = document.getElementById('review-screen');
     const reviewContent = document.getElementById('review-content');
     const backToScoreButton = document.getElementById('back-to-score-button');
+    const glossaryButton = document.getElementById('glossary-button');
+    const explanationScreen = document.getElementById('explanation-screen');
+    const explanationList = document.getElementById('explanation-list');
+    const backToScoreFromExplanationButton = document.getElementById('back-to-score-from-explanation-button');
 
     // --- ゲームデータ ---
     const STAGE1_QUESTIONS_TO_SHOW = 5;
@@ -394,6 +446,33 @@ input[type="text"] {
                 ]
             }
         ]
+    };
+
+    const glossary = {
+        "ATP-CP系": {
+            term: "ATP-CP系（クレアチンリン酸系）",
+            details: "<p>最も速くエネルギーを供給するシステムです。筋肉内に貯蔵されているクレアチンリン酸（CP）を分解し、ATPを再合成します。</p><ul><li><strong>特徴:</strong> 酸素を必要とせず、非常に速くエネルギーを供給できる。</li><li><strong>持続時間:</strong> 約8〜10秒程度。</li><li><strong>主な運動:</strong> 100m走、重量挙げ、ジャンプなど、瞬発力が求められる運動。</li></ul>"
+        },
+        "解糖系": {
+            term: "解糖系",
+            details: "<p>ATP-CP系の次に使われるエネルギー供給システム。筋肉内のグリコーゲン（糖質）を分解してATPを再合成します。酸素を必要としないため、無酸素運動とも呼ばれます。</p><ul><li><strong>特徴:</strong> ATP-CP系より供給速度は遅いが、持続時間は長い。副産物として乳酸が生成される。</li><li><strong>持続時間:</strong> 約30秒〜1分程度。</li><li><strong>主な運動:</strong> 400m走、中距離の水泳、筋力トレーニング（中〜高回数）。</li></ul>"
+        },
+        "有酸素系": {
+            term: "有酸素系",
+            details: "<p>酸素を使って、糖質や脂質、時にはタンパク質を分解し、最も多くのATPを生成するシステムです。</p><ul><li><strong>特徴:</strong> エネルギー供給速度は遅いが、持続時間が非常に長い。ミトコンドリア内で行われる。</li><li><strong>持続時間:</strong> 数分〜数時間以上。</li><li><strong>主な運動:</strong> マラソン、ジョギング、サイクリング、長距離水泳など、持久力が求められる運動。</li></ul>"
+        },
+        "インスリン": {
+            term: "インスリン",
+            details: "<p>膵臓から分泌されるホルモンで、血糖値を下げる唯一のホルモンです。食事で摂取した糖を、筋肉や脂肪細胞に取り込ませる働きがあります。</p><ul><li><strong>役割:</strong> 血糖コントロール、グリコーゲンの合成促進、タンパク質合成の促進。</li><li><strong>ポイント:</strong> トレーニング後に炭水化物とタンパク質を摂取すると、インスリンの働きで栄養素が効率よく筋肉に運ばれます。</li></ul>"
+        },
+        "成長ホルモン": {
+            term: "成長ホルモン",
+            details: "<p>脳下垂体から分泌されるホルモンで、骨や筋肉の成長を促進します。特に、筋力トレーニング後や睡眠中に多く分泌されます。</p><ul><li><strong>役割:</strong> タンパク質合成の促進（筋肥大）、脂質分解の促進、細胞の修復。</li><li><strong>ポイント:</strong> 高強度の筋トレや、質の高い睡眠は、成長ホルモンの分泌を促すために非常に重要です。</li></ul>"
+        },
+        "コルチゾール": {
+            term: "コルチゾール",
+            details: "<p>副腎皮質から分泌されるホルモンで、ストレスホルモンとも呼ばれます。血糖値を維持したり、炎症を抑えたりする重要な役割があります。</p><ul><li><strong>役割:</strong> 血糖値の上昇、抗炎症作用、免疫抑制。</li><li><strong>注意点:</strong> 過度なストレスやオーバートレーニングで慢性的に分泌が高まると、筋肉の分解や免疫力の低下を招く可能性があります。</li></ul>"
+        }
     };
 
     // --- ゲーム状態変数 ---
@@ -679,6 +758,33 @@ input[type="text"] {
         showScreen('start-screen');
     }
 
+    // 用語解説画面表示
+    function showGlossary() {
+        explanationList.innerHTML = '';
+        for (const key in glossary) {
+            const item = glossary[key];
+            const div = document.createElement('div');
+            div.classList.add('explanation-item');
+            div.innerHTML = `
+                <button class="term-button">${item.term}</button>
+                <div class="explanation-details">
+                    ${item.details}
+                </div>
+            `;
+            explanationList.appendChild(div);
+        }
+
+        // アコーディオンのクリックイベント
+        const termButtons = explanationList.querySelectorAll('.term-button');
+        termButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                button.classList.toggle('active');
+            });
+        });
+
+        showScreen('explanation-screen');
+    }
+
     // --- イベントリスナー ---
     startButton.addEventListener('click', startGame);
     nextButton.addEventListener('click', nextStage1Question);
@@ -686,7 +792,9 @@ input[type="text"] {
     nextSimulationButton.addEventListener('click', showScore);
     restartButton.addEventListener('click', restartGame);
     reviewButton.addEventListener('click', showReview);
+    glossaryButton.addEventListener('click', showGlossary);
     backToScoreButton.addEventListener('click', () => showScreen('score-screen'));
+    backToScoreFromExplanationButton.addEventListener('click', () => showScreen('score-screen'));
 });
     </script>
 </body>
