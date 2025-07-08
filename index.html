@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>運動生理学ラボ：エネルギーの迷宮</title>
+    <style>
+        /* 全体スタイル */
+body {
+    font-family: 'Helvetica Neue', 'Arial', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    background-color: #f0f2f5;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#game-container {
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    padding: 30px;
+    width: 100%;
+    max-width: 600px;
+    text-align: center;
+}
+
+/* 画面制御 */
+.screen {
+    display: none;
+}
+.screen.active {
+    display: block;
+}
+.hidden {
+    display: none !important;
+}
+
+/* テキストと見出し */
+h1 {
+    color: #005a9c;
+    font-size: 24px;
+}
+h2 {
+    color: #005a9c;
+    border-bottom: 2px solid #005a9c;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+p {
+    line-height: 1.6;
+}
+
+/* ボタン */
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 10px 5px;
+    transition: background-color 0.3s, transform 0.1s;
+}
+button:hover {
+    background-color: #0056b3;
+}
+button:active {
+    transform: scale(0.98);
+}
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* 選択肢ボタン */
+.choices-container {
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.choice-btn {
+    background-color: #f8f9fa;
+    color: #333;
+    border: 1px solid #ccc;
+    text-align: left;
+    padding: 15px;
+}
+.choice-btn:hover {
+    background-color: #e9ecef;
+    border-color: #999;
+}
+.choice-btn.correct {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+    font-weight: bold;
+}
+.choice-btn.incorrect {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+/* 入力欄 */
+input[type="text"] {
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 80%;
+    max-width: 300px;
+    margin-bottom: 20px;
+}
+
+/* フィードバック欄 */
+#feedback, #stage2-feedback, #simulation-feedback {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    min-height: 50px;
+}
+#feedback-text, #stage2-feedback-text {
+    font-size: 20px;
+    font-weight: bold;
+}
+#feedback-text.correct, #stage2-feedback-text.correct {
+    color: #155724;
+}
+#feedback-text.incorrect, #stage2-feedback-text.incorrect {
+    color: #721c24;
+}
+#explanation-text, #stage2-explanation-text, #simulation-feedback p {
+    margin-top: 10px;
+    text-align: left;
+    background-color: #e9ecef;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+/* スコア画面 */
+#score-display {
+    font-size: 28px;
+    font-weight: bold;
+    color: #dc3545;
+}
+#final-feedback {
+    font-weight: bold;
+    background-color: #fff3cd;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #ffeeba;
+}
+
+/* 復習画面 */
+#review-content {
+    text-align: left;
+}
+.review-item {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.review-item h3 {
+    font-size: 16px;
+    color: #005a9c;
+    margin-top: 0;
+}
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- スタート画面 -->
+        <div id="start-screen" class="screen active">
+            <h1>運動生理学ラボ：エネルギーの迷宮</h1>
+            <p>パーソナルトレーナーのための知識クイズゲーム</p>
+            <p>◆◇◆◇◆◇◆◇◆◇◆◇◆◇◆</p>
+            <input type="text" id="player-name" placeholder="あなたの名前を入力">
+            <button id="start-button">ゲームスタート</button>
+        </div>
+
+        <!-- ステージ1: エネルギークイズ -->
+        <div id="stage1-screen" class="screen">
+            <h2 id="stage1-title">ステージ1：エネルギークイズ</h2>
+            <p id="question-counter"></p>
+            <p id="question-text"></p>
+            <div id="choices" class="choices-container"></div>
+            <div id="feedback">
+                <p id="feedback-text"></p>
+                <p id="explanation-text"></p>
+            </div>
+            <button id="next-button" class="hidden">次へ</button>
+        </div>
+
+        <!-- ステージ2: ホルモン応答選択 -->
+        <div id="stage2-screen" class="screen">
+            <h2 id="stage2-title">ステージ2：ホルモン応答クイズ</h2>
+            <p id="stage2-question-counter"></p>
+            <p id="stage2-question-text"></p>
+            <div id="stage2-choices" class="choices-container"></div>
+            <div id="stage2-feedback">
+                <p id="stage2-feedback-text"></p>
+                <p id="stage2-explanation-text"></p>
+            </div>
+            <button id="stage2-next-button" class="hidden">次へ</button>
+        </div>
+        
+        <!-- ステージ3: クライアント選択 -->
+        <div id="stage3-client-selection-screen" class="screen">
+            <h2>ステージ3：クライアント対応シミュレーション</h2>
+            <p>3人のクライアントから1人を選び、目標達成をサポートしてください。</p>
+            <div id="client-choices"></div>
+        </div>
+
+        <!-- ステージ3: シミュレーション本体 -->
+        <div id="stage3-simulation-screen" class="screen">
+            <h2 id="client-info"></h2>
+            <div id="simulation-step"></div>
+            <div id="simulation-choices" class="choices-container"></div>
+            <div id="simulation-feedback"></div>
+            <button id="next-simulation-button" class="hidden">結果へ</button>
+        </div>
+
+
+        <!-- スコア画面 -->
+        <div id="score-screen" class="screen">
+            <h2>ゲームクリア！</h2>
+            <p id="player-result"></p>
+            <h3>◆ スコア ◆</h3>
+            <p id="score-display"></p>
+            <h3>◆ 総評コメント ◆</h3>
+            <p id="final-feedback"></p>
+            <p>◆◇◆◇◆◇◆◇◆◇◆◇◆◇◆</p>
+            <button id="restart-button">もう一度プレイ</button>
+            <button id="review-button">復習解説を見る</button>
+        </div>
+
+        <!-- 復習画面 -->
+        <div id="review-screen" class="screen">
+            <h2>復習解説</h2>
+            <div id="review-content"></div>
+            <button id="back-to-score-button">スコア画面に戻る</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+    // --- DOM要素の取得 ---
+    const screens = document.querySelectorAll('.screen');
+    const startButton = document.getElementById('start-button');
+    const playerNameInput = document.getElementById('player-name');
+    
+    // Stage 1
+    const stage1Screen = document.getElementById('stage1-screen');
+    const questionCounter = document.getElementById('question-counter');
+    const questionText = document.getElementById('question-text');
+    const choicesContainer = document.getElementById('choices');
+    const feedbackText = document.getElementById('feedback-text');
+    const explanationText = document.getElementById('explanation-text');
+    const nextButton = document.getElementById('next-button');
+
+    // Stage 2
+    const stage2Screen = document.getElementById('stage2-screen');
+    const stage2QuestionCounter = document.getElementById('stage2-question-counter');
+    const stage2QuestionText = document.getElementById('stage2-question-text');
+    const stage2ChoicesContainer = document.getElementById('stage2-choices');
+    const stage2FeedbackText = document.getElementById('stage2-feedback-text');
+    const stage2ExplanationText = document.getElementById('stage2-explanation-text');
+    const stage2NextButton = document.getElementById('stage2-next-button');
+
+    // Stage 3
+    const stage3ClientSelectionScreen = document.getElementById('stage3-client-selection-screen');
+    const clientChoicesContainer = document.getElementById('client-choices');
+    const stage3SimulationScreen = document.getElementById('stage3-simulation-screen');
+    const clientInfo = document.getElementById('client-info');
+    const simulationStep = document.getElementById('simulation-step');
+    const simulationChoices = document.getElementById('simulation-choices');
+    const simulationFeedback = document.getElementById('simulation-feedback');
+    const nextSimulationButton = document.getElementById('next-simulation-button');
+
+    // Score & Review
+    const scoreScreen = document.getElementById('score-screen');
+    const playerResult = document.getElementById('player-result');
+    const scoreDisplay = document.getElementById('score-display');
+    const finalFeedback = document.getElementById('final-feedback');
+    const restartButton = document.getElementById('restart-button');
+    const reviewButton = document.getElementById('review-button');
+    const reviewScreen = document.getElementById('review-screen');
+    const reviewContent = document.getElementById('review-content');
+    const backToScoreButton = document.getElementById('back-to-score-button');
+
+    // --- ゲームデータ ---
+    const stage1Questions = [
+        { q: "スクワット1レップのような、数秒で終わる爆発的な運動で最も使われるエネルギー供給系は？", c: ["A. 有酸素系", "B. 解糖系", "C. クレアチンリン酸(ATP-CP)系"], a: 2, ex: "◎正解！クレアチンリン酸系は、最も速くATPを再合成し、約8秒程度の高強度運動を支えます。" },
+        { q: "400m走のような、30秒～1分程度続く高強度の運動で主に使われるエネルギー供給系は？", c: ["A. 解糖系", "B. クレアチンリン酸系", "C. 脂肪燃焼系"], a: 0, ex: "◎正解！解糖系は、クレアチンリン酸が枯渇した後、乳酸を生成しながらATPを供給します。" },
+        { q: "マラソンのような、長時間続く低～中強度の運動で主に使われるエネルギー供給系は？", c: ["A. 解糖系", "B. 有酸素系", "C. ATP-PCr系"], a: 1, ex: "◎正解！有酸素系は、酸素を使い糖や脂肪から大量のATPを生成し、長時間の運動を可能にします。" },
+        { q: "運動後、体内に蓄えられたグリコーゲンが枯渇すると、どのような状態になりやすい？", c: ["A. 筋肉痛", "B. ハンガーノック（極度の疲労）", "C. 筋肥大"], a: 1, ex: "◎正解！ハンガーノックはエネルギー切れの状態です。運動中の炭水化物補給が予防に繋がります。" },
+        { q: "エネルギー通貨と呼ばれる、体内でエネルギーの受け渡しを担う物質は？", c: ["A. ADP", "B. ATP (アデノシン三リン酸)", "C. DNA"], a: 1, ex: "◎正解！ATPは全ての生命活動のエネルギー源であり、分解されることでエネルギーを放出します。" }
+    ];
+
+    const stage2Questions = [
+        { q: "食後、血糖値が上昇した際に、それを下げるために主に分泌されるホルモンは？", c: ["A. グルカゴン", "B. インスリン", "C. コルチゾール"], a: 1, ex: "◎正解！インスリンは、血中の糖を筋肉や脂肪細胞に取り込ませ、血糖値を正常に保ちます。" },
+        { q: "高強度のレジスタンストレーニング中や睡眠中に、筋肉の修復や成長を促すために分泌が高まるホルモンは？", c: ["A. 成長ホルモン", "B. アドレナリン", "C. エストロゲン"], a: 0, ex: "◎正解！成長ホルモンは、タンパク質合成を促進し、トレーニング後の身体の回復に不可欠です。" },
+        { q: "強いストレスや長時間の運動によって分泌され、血糖値を維持する一方、過剰になると筋肉を分解する作用もあるホルモンは？", c: ["A. テストステロン", "B. インスリン", "C. コルチゾール"], a: 2, ex: "◎正解！コルチゾールは重要なホルモンですが、慢性的な過剰分泌はオーバートレーニングの兆候ともなります。" }
+    ];
+    
+    const stage3Data = {
+        clients: [
+            { name: "Aさん", goal: "筋肥大", details: "週3でジムに通う20代男性。たくましい体を目指す。" },
+            { name: "Bさん", goal: "ダイエット", details: "運動経験少なめの30代女性。健康的に体重を落としたい。" },
+            { name: "Cさん", goal: "持久力向上", details: "フルマラソン完走を目指す40代。長距離を走れるようになりたい。" }
+        ],
+        simulations: [
+            // 筋肥大
+            {
+                steps: ["運動強度", "休息", "栄養補給"],
+                choices: [
+                    ["A. 軽い重量で高回数", "B. 最大筋力の80%前後で8-12回", "C. 30分以上の有酸素運動"],
+                    ["A. セット間15秒", "B. セット間60-90秒", "C. セット間5分以上"],
+                    ["A. トレーニング後のプロテインと炭水化物", "B. 運動前のフルーツのみ", "C. 特に意識しない"]
+                ],
+                answers: [1, 1, 0],
+                feedback: [
+                    "◎適切！筋肥大には、筋肉に十分な機械的刺激を与える高強度が効果的です。",
+                    "◎適切！筋線維を十分に回復させつつ、成長ホルモンの分泌を促す最適な休息時間です。",
+                    "◎適切！トレーニングで傷ついた筋線維の修復と成長のため、タンパク質とエネルギーの補給が不可欠です。"
+                ]
+            },
+            // ダイエット
+            {
+                steps: ["運動の種類", "運動時間", "食事"],
+                choices: [
+                    ["A. 最大重量でのスクワット", "B. ウォーキングやジョギングなどの中強度有酸素運動", "C. 短距離ダッシュ"],
+                    ["A. 1回10分", "B. 1回30-60分", "C. 1回2時間以上"],
+                    ["A. 摂取カロリー > 消費カロリー", "B. 摂取カロリー < 消費カロリー", "C. 食事は変えずに運動だけ行う"]
+                ],
+                answers: [1, 1, 1],
+                feedback: [
+                    "◎適切！脂肪燃焼を効率的に行うには、長時間継続できる有酸素運動が基本です。",
+                    "◎適切！20分以上継続することで脂肪燃焼効果が高まります。長すぎると継続が困難になるため、良いバランスです。",
+                    "◎適切！ダイエットの基本原則は、消費カロリーが摂取カロリーを上回ることです。"
+                ]
+            },
+            // 持久力向上
+            {
+                steps: ["運動強度", "トレーニング頻度", "栄養補給"],
+                choices: [
+                    ["A. 会話ができる程度のペース（LSD）", "B. 息が完全に上がる高強度インターバル", "C. 筋力トレーニングのみ"],
+                    ["A. 毎日全力で走る", "B. 週3-4回、強度に緩急をつける", "C. 月に1回"],
+                    ["A. 運動中は水分のみ", "B. 運動時間が長い場合は、糖質ドリンクやジェルを補給", "C. 高タンパクな食事のみ"]
+                ],
+                answers: [0, 1, 1],
+                feedback: [
+                    "◎適切！LSD(Long Slow Distance)は、毛細血管を発達させ、ミトコンドリアを増やし、有酸素能力を高めます。",
+                    "◎適切！休息日を設け、超回復を促すことが重要です。緩急をつけることで効率的に能力が向上します。",
+                    "◎適切！長時間の運動では、エネルギー源となる糖質が枯渇します。計画的な補給がパフォーマンスを維持します。"
+                ]
+            }
+        ]
+    };
+
+    // --- ゲーム状態変数 ---
+    let playerName = "";
+    let currentStage = 0;
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let collectedExplanations = [];
+    let selectedClientIndex = -1;
+    let currentSimulationStep = 0;
+
+    // --- 関数 ---
+
+    // 画面切り替え
+    function showScreen(screenId) {
+        screens.forEach(screen => {
+            screen.classList.remove('active');
+        });
+        document.getElementById(screenId).classList.add('active');
+    }
+
+    // ゲーム開始
+    function startGame() {
+        playerName = playerNameInput.value || "トレーナー";
+        if (playerName.trim() === "") {
+            playerName = "トレーナー";
+        }
+        currentStage = 1;
+        currentQuestionIndex = 0;
+        score = 0;
+        collectedExplanations = [];
+        showScreen('stage1-screen');
+        displayStage1Question();
+    }
+
+    // ステージ1：問題表示
+    function displayStage1Question() {
+        resetFeedback();
+        const q = stage1Questions[currentQuestionIndex];
+        questionCounter.textContent = `問題 ${currentQuestionIndex + 1} / ${stage1Questions.length}`;
+        questionText.textContent = `Q. ${q.q}`;
+        choicesContainer.innerHTML = '';
+        q.c.forEach((choice, index) => {
+            const button = document.createElement('button');
+            button.textContent = choice;
+            button.classList.add('choice-btn');
+            button.onclick = () => selectAnswer(index, q.a, q.ex);
+            choicesContainer.appendChild(button);
+        });
+        nextButton.classList.add('hidden');
+    }
+
+    // ステージ1：回答選択
+    function selectAnswer(selectedIndex, correctIndex, explanation) {
+        const buttons = choicesContainer.querySelectorAll('.choice-btn');
+        buttons.forEach(button => button.disabled = true);
+
+        if (selectedIndex === correctIndex) {
+            feedbackText.textContent = "◎ 正解！";
+            feedbackText.className = 'correct';
+            score++;
+        } else {
+            feedbackText.textContent = "● 不正解...";
+            feedbackText.className = 'incorrect';
+            buttons[selectedIndex].classList.add('incorrect');
+        }
+        buttons[correctIndex].classList.add('correct');
+        explanationText.textContent = explanation;
+        collectedExplanations.push({ q: stage1Questions[currentQuestionIndex].q, ex: explanation });
+        nextButton.classList.remove('hidden');
+    }
+    
+    // ステージ1：次の問題へ
+    function nextStage1Question() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < stage1Questions.length) {
+            displayStage1Question();
+        } else {
+            startStage2();
+        }
+    }
+
+    // ステージ2：開始
+    function startStage2() {
+        currentStage = 2;
+        currentQuestionIndex = 0;
+        showScreen('stage2-screen');
+        displayStage2Question();
+    }
+
+    // ステージ2：問題表示
+    function displayStage2Question() {
+        resetFeedback();
+        const q = stage2Questions[currentQuestionIndex];
+        stage2QuestionCounter.textContent = `問題 ${currentQuestionIndex + 1} / ${stage2Questions.length}`;
+        stage2QuestionText.textContent = `Q. ${q.q}`;
+        stage2ChoicesContainer.innerHTML = '';
+        q.c.forEach((choice, index) => {
+            const button = document.createElement('button');
+            button.textContent = choice;
+            button.classList.add('choice-btn');
+            button.onclick = () => selectStage2Answer(index, q.a, q.ex);
+            stage2ChoicesContainer.appendChild(button);
+        });
+        stage2NextButton.classList.add('hidden');
+    }
+
+    // ステージ2：回答選択
+    function selectStage2Answer(selectedIndex, correctIndex, explanation) {
+        const buttons = stage2ChoicesContainer.querySelectorAll('.choice-btn');
+        buttons.forEach(button => button.disabled = true);
+
+        if (selectedIndex === correctIndex) {
+            stage2FeedbackText.textContent = "◎ 正解！";
+            stage2FeedbackText.className = 'correct';
+            score++;
+        } else {
+            stage2FeedbackText.textContent = "● 不正解...";
+            stage2FeedbackText.className = 'incorrect';
+            buttons[selectedIndex].classList.add('incorrect');
+        }
+        buttons[correctIndex].classList.add('correct');
+        stage2ExplanationText.textContent = explanation;
+        collectedExplanations.push({ q: stage2Questions[currentQuestionIndex].q, ex: explanation });
+        stage2NextButton.classList.remove('hidden');
+    }
+
+    // ステージ2：次の問題へ
+    function nextStage2Question() {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < stage2Questions.length) {
+            displayStage2Question();
+        } else {
+            startStage3();
+        }
+    }
+
+    // ステージ3：開始（クライアント選択）
+    function startStage3() {
+        currentStage = 3;
+        showScreen('stage3-client-selection-screen');
+        clientChoicesContainer.innerHTML = '';
+        stage3Data.clients.forEach((client, index) => {
+            const button = document.createElement('button');
+            button.classList.add('choice-btn');
+            button.innerHTML = `<h3>${client.name}（目標：${client.goal}）</h3><p>${client.details}</p>`;
+            button.onclick = () => selectClient(index);
+            clientChoicesContainer.appendChild(button);
+        });
+    }
+
+    // ステージ3：クライアント選択
+    function selectClient(index) {
+        selectedClientIndex = index;
+        currentSimulationStep = 0;
+        showScreen('stage3-simulation-screen');
+        displaySimulationStep();
+    }
+
+    // ステージ3：シミュレーションのステップ表示
+    function displaySimulationStep() {
+        simulationFeedback.innerHTML = '';
+        nextSimulationButton.classList.add('hidden');
+
+        const client = stage3Data.clients[selectedClientIndex];
+        const sim = stage3Data.simulations[selectedClientIndex];
+        const step = sim.steps[currentSimulationStep];
+        
+        clientInfo.textContent = `${client.name}のサポート（目標：${client.goal}）`;
+        simulationStep.textContent = `適切な「${step}」を選んでください。`;
+        
+        simulationChoices.innerHTML = '';
+        sim.choices[currentSimulationStep].forEach((choice, index) => {
+            const button = document.createElement('button');
+            button.textContent = choice;
+            button.classList.add('choice-btn');
+            button.onclick = () => selectSimulationChoice(index);
+            simulationChoices.appendChild(button);
+        });
+    }
+
+    // ステージ3：シミュレーションの選択肢を選択
+    function selectSimulationChoice(selectedIndex) {
+        const sim = stage3Data.simulations[selectedClientIndex];
+        const correctIndex = sim.answers[currentSimulationStep];
+        const feedback = sim.feedback[currentSimulationStep];
+        const buttons = simulationChoices.querySelectorAll('.choice-btn');
+        buttons.forEach(b => b.disabled = true);
+
+        if (selectedIndex === correctIndex) {
+            score++; // シミュレーションの正解もスコアに加算
+        }
+        buttons[selectedIndex].classList.add(selectedIndex === correctIndex ? 'correct' : 'incorrect');
+        if(selectedIndex !== correctIndex) {
+            buttons[correctIndex].classList.add('correct');
+        }
+
+        simulationFeedback.innerHTML = `<p>${feedback}</p>`;
+        collectedExplanations.push({ q: `【${stage3Data.clients[selectedClientIndex].goal}】${sim.steps[currentSimulationStep]}`, ex: feedback });
+
+        currentSimulationStep++;
+        if (currentSimulationStep < sim.steps.length) {
+            setTimeout(displaySimulationStep, 2000); // 2秒後に次のステップへ
+        } else {
+            nextSimulationButton.classList.remove('hidden');
+        }
+    }
+
+    // フィードバック表示をリセット
+    function resetFeedback() {
+        feedbackText.textContent = '';
+        explanationText.textContent = '';
+        stage2FeedbackText.textContent = '';
+        stage2ExplanationText.textContent = '';
+        feedbackText.className = '';
+        stage2FeedbackText.className = '';
+    }
+
+    // スコア表示
+    function showScore() {
+        showScreen('score-screen');
+        const totalQuestions = stage1Questions.length + stage2Questions.length + stage3Data.simulations[0].steps.length;
+        playerResult.textContent = `${playerName}さんの結果は...`;
+        scoreDisplay.textContent = `${score} / ${totalQuestions} 問正解`;
+
+        let feedbackMsg = "";
+        const percentage = (score / totalQuestions) * 100;
+        if (percentage >= 90) {
+            feedbackMsg = "素晴らしい！知識は完璧です。自信を持ってクライアントを指導できます。";
+        } else if (percentage >= 70) {
+            feedbackMsg = "優秀です！基礎はしっかり固まっています。さらに応用力を磨きましょう。";
+        } else if (percentage >= 50) {
+            feedbackMsg = "まずまずです。重要なポイントは押さえられています。苦手分野を復習しましょう。";
+        } else {
+            feedbackMsg = "もう少し頑張りましょう。このゲームで基礎をしっかり復習し、知識を定着させましょう！";
+        }
+        finalFeedback.textContent = feedbackMsg;
+    }
+
+    // 復習画面表示
+    function showReview() {
+        reviewContent.innerHTML = '';
+        collectedExplanations.forEach(item => {
+            const div = document.createElement('div');
+            div.classList.add('review-item');
+            div.innerHTML = `<h3>Q. ${item.q}</h3><p>${item.ex}</p>`;
+            reviewContent.appendChild(div);
+        });
+        showScreen('review-screen');
+    }
+
+    // ゲームリスタート
+    function restartGame() {
+        showScreen('start-screen');
+    }
+
+    // --- イベントリスナー ---
+    startButton.addEventListener('click', startGame);
+    nextButton.addEventListener('click', nextStage1Question);
+    stage2NextButton.addEventListener('click', nextStage2Question);
+    nextSimulationButton.addEventListener('click', showScore);
+    restartButton.addEventListener('click', restartGame);
+    reviewButton.addEventListener('click', showReview);
+    backToScoreButton.addEventListener('click', () => showScreen('score-screen'));
+});
+    </script>
+</body>
+</html>
