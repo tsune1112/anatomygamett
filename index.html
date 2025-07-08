@@ -175,6 +175,26 @@ input[type="text"] {
     color: #005a9c;
     margin-top: 0;
 }
+.review-choice {
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 4px;
+}
+.review-choice.correct {
+    background-color: #d4edda;
+    border-left: 5px solid #155724;
+}
+.review-choice.incorrect {
+    background-color: #f8d7da;
+    border-left: 5px solid #721c24;
+}
+.review-choice-text {
+    font-weight: bold;
+}
+.review-explanation {
+    font-size: 14px;
+    margin-top: 5px;
+}
     </style>
 </head>
 <body>
@@ -300,18 +320,25 @@ input[type="text"] {
     const backToScoreButton = document.getElementById('back-to-score-button');
 
     // --- ゲームデータ ---
-    const stage1Questions = [
-        { q: "スクワット1レップのような、数秒で終わる爆発的な運動で最も使われるエネルギー供給系は？", c: ["A. 有酸素系", "B. 解糖系", "C. クレアチンリン酸(ATP-CP)系"], a: 2, ex: "◎正解！クレアチンリン酸系は、最も速くATPを再合成し、約8秒程度の高強度運動を支えます。" },
-        { q: "400m走のような、30秒～1分程度続く高強度の運動で主に使われるエネルギー供給系は？", c: ["A. 解糖系", "B. クレアチンリン酸系", "C. 脂肪燃焼系"], a: 0, ex: "◎正解！解糖系は、クレアチンリン酸が枯渇した後、乳酸を生成しながらATPを供給します。" },
-        { q: "マラソンのような、長時間続く低～中強度の運動で主に使われるエネルギー供給系は？", c: ["A. 解糖系", "B. 有酸素系", "C. ATP-PCr系"], a: 1, ex: "◎正解！有酸素系は、酸素を使い糖や脂肪から大量のATPを生成し、長時間の運動を可能にします。" },
-        { q: "運動後、体内に蓄えられたグリコーゲンが枯渇すると、どのような状態になりやすい？", c: ["A. 筋肉痛", "B. ハンガーノック（極度の疲労）", "C. 筋肥大"], a: 1, ex: "◎正解！ハンガーノックはエネルギー切れの状態です。運動中の炭水化物補給が予防に繋がります。" },
-        { q: "エネルギー通貨と呼ばれる、体内でエネルギーの受け渡しを担う物質は？", c: ["A. ADP", "B. ATP (アデノシン三リン酸)", "C. DNA"], a: 1, ex: "◎正解！ATPは全ての生命活動のエネルギー源であり、分解されることでエネルギーを放出します。" }
+    const STAGE1_QUESTIONS_TO_SHOW = 5;
+    const STAGE2_QUESTIONS_TO_SHOW = 3;
+
+    const allStage1Questions = [
+        { q: "スクワット1レップのような、数秒で終わる爆発的な運動で最も使われるエネルギー供給系は？", c: [{t:"有酸素系",e:"× 不正解。有酸素系は長時間の運動で主に使われます。"}, {t:"解糖系",e:"× 不正解。解糖系は数十秒続く運動で主に使われます。"}, {t:"クレアチンリン酸(ATP-CP)系",e:"◎ 正解！最も速くエネルギーを供給し、瞬発的な動きを支えます。"}] , a: 2 },
+        { q: "400m走のような、30秒～1分程度続く高強度の運動で主に使われるエネルギー供給系は？", c: [{t:"解糖系",e:"◎ 正解！クレアチンリン酸が枯渇した後、乳酸を生成しながらATPを供給します。"}, {t:"クレアチンリン酸系",e:"× 不正解。クレアチンリン酸系は約8秒で枯渇するため、400m走はカバーできません。"}, {t:"脂肪燃焼系",e:"× 不正解。脂肪の燃焼は時間がかかるため、高強度運動の主なエネルギー源にはなりません。"}] , a: 0 },
+        { q: "マラソンのような、長時間続く低～中強度の運動で主に使われるエネルギー供給系は？", c: [{t:"解糖系",e:"× 不正解。解糖系だけでは長時間のエネルギーを供給しきれません。"}, {t:"有酸素系",e:"◎ 正解！酸素を使い糖や脂肪から大量のATPを生成し、長時間の運動を可能にします。"}, {t:"ATP-PCr系",e:"× 不正解。ATP-PCr系は瞬発的な動きのためのシステムです。"}] , a: 1 },
+        { q: "運動後、体内に蓄えられたグリコーゲンが枯渇すると、どのような状態になりやすい？", c: [{t:"筋肉痛",e:"× 不正解。筋肉痛は筋線維の損傷が主な原因です。"}, {t:"ハンガーノック（極度の疲労）",e:"◎ 正解！エネルギー切れの状態です。運動中の炭水化物補給が予防に繋がります。"}, {t:"筋肥大",e:"× 不正解。筋肥大は適切なトレーニングと栄養、休養によって起こります。"}] , a: 1 },
+        { q: "エネルギー通貨と呼ばれる、体内でエネルギーの受け渡しを担う物質は？", c: [{t:"ADP",e:"× 不正解。ADPはATPが分解された後の物質です。"}, {t:"ATP (アデノシン三リン酸)",e:"◎ 正解！ATPは全ての生命活動のエネルギー源であり、分解されることでエネルギーを放出します。"}, {t:"DNA",e:"× 不正解。DNAは遺伝情報を担う物質です。"}] , a: 1 },
+        { q: "有酸素運動において、エネルギー源として脂肪が使われる割合が高まるのはどのような状況？", c: [{t:"運動開始直後",e:"× 不正解。運動開始直後は主に糖質が使われます。"}, {t:"運動強度が高いとき",e:"× 不正解。強度が高いと糖質への依存度が高まります。"}, {t:"運動時間が長くなったとき",e:"◎ 正解！運動時間が長くなるにつれて、脂肪がエネルギー源として使われる割合が増加します。"}] , a: 2 },
+        { q: "解糖系の最終産物で、有酸素系でさらにエネルギーとして利用される物質は？", c: [{t:"乳酸",e:"× 不正解。乳酸はピルビン酸から作られますが、直接有酸素系に入るわけではありません。"}, {t:"ピルビン酸",e:"◎ 正解！ピルビン酸はアセチルCoAに変換され、TCA回路で利用されます。"}, {t:"アミノ酸",e:"× 不正解。アミノ酸はタンパク質の構成要素です。"}] , a: 1 }
     ];
 
-    const stage2Questions = [
-        { q: "食後、血糖値が上昇した際に、それを下げるために主に分泌されるホルモンは？", c: ["A. グルカゴン", "B. インスリン", "C. コルチゾール"], a: 1, ex: "◎正解！インスリンは、血中の糖を筋肉や脂肪細胞に取り込ませ、血糖値を正常に保ちます。" },
-        { q: "高強度のレジスタンストレーニング中や睡眠中に、筋肉の修復や成長を促すために分泌が高まるホルモンは？", c: ["A. 成長ホルモン", "B. アドレナリン", "C. エストロゲン"], a: 0, ex: "◎正解！成長ホルモンは、タンパク質合成を促進し、トレーニング後の身体の回復に不可欠です。" },
-        { q: "強いストレスや長時間の運動によって分泌され、血糖値を維持する一方、過剰になると筋肉を分解する作用もあるホルモンは？", c: ["A. テストステロン", "B. インスリン", "C. コルチゾール"], a: 2, ex: "◎正解！コルチゾールは重要なホルモンですが、慢性的な過剰分泌はオーバートレーニングの兆候ともなります。" }
+    const allStage2Questions = [
+        { q: "食後、血糖値が上昇した際に、それを下げるために主に分泌されるホルモンは？", c: [{t:"グルカゴン",e:"× 不正解。グルカゴンは血糖値を上げる働きがあります。"}, {t:"インスリン",e:"◎ 正解！インスリンは血中の糖を細胞に取り込ませ、血糖値を下げます。"}, {t:"コルチゾール",e:"× 不正解。コルチゾールも血糖を上げますが、主にストレス時に分泌されます。"}] , a: 1 },
+        { q: "高強度のレジスタンストレーニング中や睡眠中に、筋肉の修復や成長を促すために分泌が高まるホルモンは？", c: [{t:"成長ホルモン",e:"◎ 正解！成長ホルモンはタンパク質合成を促進し、身体の回復に不可欠です。"}, {t:"アドレナリン",e:"× 不正解。アドレナリンは心拍数を上げ、体を興奮状態にします。"}, {t:"エストロゲン",e:"× 不正解。エストロゲンは女性ホルモンの一つです。"}] , a: 0 },
+        { q: "強いストレスや長時間の運動によって分泌され、血糖値を維持する一方、過剰になると筋肉を分解する作用もあるホルモンは？", c: [{t:"テストステロン",e:"× 不正解。テストステロンは筋肉の合成を促進するホルモンです。"}, {t:"インスリン",e:"× 不正解。インスリンは血糖値を下げるホルモンです。"}, {t:"コルチゾール",e:"◎ 正解！重要なホルモンですが、慢性的な過剰分泌はオーバートレーニングの兆候です。"}] , a: 2 },
+        { q: "空腹時に血糖値が下がりすぎないように、肝臓のグリコーゲン分解を促すホルモンは？", c: [{t:"インスリン",e:"× 不正解。インスリンは血糖値を下げる働きをします。"}, {t:"グルカゴン",e:"◎ 正解！グルカゴンは主に膵臓から分泌され、血糖値を維持します。"}, {t:"アドレナリン",e:"× 不正解。アドレナリンも血糖を上げますが、主に緊急時に働きます。"}] , a: 1 },
+        { q: "闘争・逃走反応（Fight or Flight）に関与し、心拍数と血圧を急上昇させるホルモンは？", c: [{t:"アドレナリン（エピネフリン）",e:"◎ 正解！交感神経系を刺激し、身体を緊急事態に対応させます。"}, {t:"セロトニン",e:"× 不正解。セロトニンは精神の安定に関わる神経伝達物質です。"}, {t:"メラトニン",e:"× 不正解。メラトニンは睡眠を促すホルモンです。"}] , a: 0 }
     ];
     
     const stage3Data = {
@@ -371,9 +398,11 @@ input[type="text"] {
 
     // --- ゲーム状態変数 ---
     let playerName = "";
-    let currentStage = 0;
-    let currentQuestionIndex = 0;
     let score = 0;
+    let stage1Questions = [];
+    let stage2Questions = [];
+    let currentQuestion;
+    let currentQuestionIndex = 0;
     let collectedExplanations = [];
     let selectedClientIndex = -1;
     let currentSimulationStep = 0;
@@ -382,22 +411,35 @@ input[type="text"] {
 
     // 画面切り替え
     function showScreen(screenId) {
-        screens.forEach(screen => {
-            screen.classList.remove('active');
-        });
+        screens.forEach(screen => screen.classList.remove('active'));
         document.getElementById(screenId).classList.add('active');
+    }
+
+    // 配列をシャッフルする（Fisher-Yatesアルゴリズム）
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
     }
 
     // ゲーム開始
     function startGame() {
-        playerName = playerNameInput.value || "トレーナー";
-        if (playerName.trim() === "") {
-            playerName = "トレーナー";
-        }
-        currentStage = 1;
-        currentQuestionIndex = 0;
+        playerName = playerNameInput.value.trim() || "トレーナー";
         score = 0;
         collectedExplanations = [];
+        
+        // 問題をランダムに選出
+        stage1Questions = shuffleArray([...allStage1Questions]).slice(0, STAGE1_QUESTIONS_TO_SHOW);
+        stage2Questions = shuffleArray([...allStage2Questions]).slice(0, STAGE2_QUESTIONS_TO_SHOW);
+
+        startStage1();
+    }
+
+    // ステージ1：開始
+    function startStage1() {
+        currentQuestionIndex = 0;
         showScreen('stage1-screen');
         displayStage1Question();
     }
@@ -405,38 +447,48 @@ input[type="text"] {
     // ステージ1：問題表示
     function displayStage1Question() {
         resetFeedback();
-        const q = stage1Questions[currentQuestionIndex];
+        currentQuestion = stage1Questions[currentQuestionIndex];
         questionCounter.textContent = `問題 ${currentQuestionIndex + 1} / ${stage1Questions.length}`;
-        questionText.textContent = `Q. ${q.q}`;
+        questionText.textContent = `Q. ${currentQuestion.q}`;
         choicesContainer.innerHTML = '';
-        q.c.forEach((choice, index) => {
+        currentQuestion.c.forEach((choice, index) => {
             const button = document.createElement('button');
-            button.textContent = choice;
+            button.textContent = choice.t;
             button.classList.add('choice-btn');
-            button.onclick = () => selectAnswer(index, q.a, q.ex);
+            button.onclick = () => selectAnswer(index);
             choicesContainer.appendChild(button);
         });
         nextButton.classList.add('hidden');
     }
 
-    // ステージ1：回答選択
-    function selectAnswer(selectedIndex, correctIndex, explanation) {
-        const buttons = choicesContainer.querySelectorAll('.choice-btn');
+    // 回答選択（ステージ1 & 2共通ロジック）
+    function selectAnswer(selectedIndex) {
+        const isStage1 = stage1Screen.classList.contains('active');
+        const container = isStage1 ? choicesContainer : stage2ChoicesContainer;
+        const feedback = isStage1 ? feedbackText : stage2FeedbackText;
+        const explanation = isStage1 ? explanationText : stage2ExplanationText;
+        const nextBtn = isStage1 ? nextButton : stage2NextButton;
+
+        const buttons = container.querySelectorAll('.choice-btn');
         buttons.forEach(button => button.disabled = true);
 
+        const correctIndex = currentQuestion.a;
+        const selectedChoice = currentQuestion.c[selectedIndex];
+
         if (selectedIndex === correctIndex) {
-            feedbackText.textContent = "◎ 正解！";
-            feedbackText.className = 'correct';
+            feedback.textContent = "◎ 正解！";
+            feedback.className = 'correct';
             score++;
         } else {
-            feedbackText.textContent = "● 不正解...";
-            feedbackText.className = 'incorrect';
+            feedback.textContent = "● 不正解...";
+            feedback.className = 'incorrect';
             buttons[selectedIndex].classList.add('incorrect');
         }
         buttons[correctIndex].classList.add('correct');
-        explanationText.textContent = explanation;
-        collectedExplanations.push({ q: stage1Questions[currentQuestionIndex].q, ex: explanation });
-        nextButton.classList.remove('hidden');
+        explanation.textContent = selectedChoice.e; // 選んだ選択肢の解説を表示
+        
+        collectedExplanations.push(currentQuestion);
+        nextBtn.classList.remove('hidden');
     }
     
     // ステージ1：次の問題へ
@@ -451,7 +503,6 @@ input[type="text"] {
 
     // ステージ2：開始
     function startStage2() {
-        currentStage = 2;
         currentQuestionIndex = 0;
         showScreen('stage2-screen');
         displayStage2Question();
@@ -460,38 +511,18 @@ input[type="text"] {
     // ステージ2：問題表示
     function displayStage2Question() {
         resetFeedback();
-        const q = stage2Questions[currentQuestionIndex];
+        currentQuestion = stage2Questions[currentQuestionIndex];
         stage2QuestionCounter.textContent = `問題 ${currentQuestionIndex + 1} / ${stage2Questions.length}`;
-        stage2QuestionText.textContent = `Q. ${q.q}`;
+        stage2QuestionText.textContent = `Q. ${currentQuestion.q}`;
         stage2ChoicesContainer.innerHTML = '';
-        q.c.forEach((choice, index) => {
+        currentQuestion.c.forEach((choice, index) => {
             const button = document.createElement('button');
-            button.textContent = choice;
+            button.textContent = choice.t;
             button.classList.add('choice-btn');
-            button.onclick = () => selectStage2Answer(index, q.a, q.ex);
+            button.onclick = () => selectAnswer(index);
             stage2ChoicesContainer.appendChild(button);
         });
         stage2NextButton.classList.add('hidden');
-    }
-
-    // ステージ2：回答選択
-    function selectStage2Answer(selectedIndex, correctIndex, explanation) {
-        const buttons = stage2ChoicesContainer.querySelectorAll('.choice-btn');
-        buttons.forEach(button => button.disabled = true);
-
-        if (selectedIndex === correctIndex) {
-            stage2FeedbackText.textContent = "◎ 正解！";
-            stage2FeedbackText.className = 'correct';
-            score++;
-        } else {
-            stage2FeedbackText.textContent = "● 不正解...";
-            stage2FeedbackText.className = 'incorrect';
-            buttons[selectedIndex].classList.add('incorrect');
-        }
-        buttons[correctIndex].classList.add('correct');
-        stage2ExplanationText.textContent = explanation;
-        collectedExplanations.push({ q: stage2Questions[currentQuestionIndex].q, ex: explanation });
-        stage2NextButton.classList.remove('hidden');
     }
 
     // ステージ2：次の問題へ
@@ -506,7 +537,6 @@ input[type="text"] {
 
     // ステージ3：開始（クライアント選択）
     function startStage3() {
-        currentStage = 3;
         showScreen('stage3-client-selection-screen');
         clientChoicesContainer.innerHTML = '';
         stage3Data.clients.forEach((client, index) => {
@@ -557,7 +587,7 @@ input[type="text"] {
         buttons.forEach(b => b.disabled = true);
 
         if (selectedIndex === correctIndex) {
-            score++; // シミュレーションの正解もスコアに加算
+            score++;
         }
         buttons[selectedIndex].classList.add(selectedIndex === correctIndex ? 'correct' : 'incorrect');
         if(selectedIndex !== correctIndex) {
@@ -565,11 +595,22 @@ input[type="text"] {
         }
 
         simulationFeedback.innerHTML = `<p>${feedback}</p>`;
-        collectedExplanations.push({ q: `【${stage3Data.clients[selectedClientIndex].goal}】${sim.steps[currentSimulationStep]}`, ex: feedback });
+        
+        // シミュレーションの解説も復習用に保存
+        const explanationData = {
+            q: `【${stage3Data.clients[selectedClientIndex].goal}】${sim.steps[currentSimulationStep]}`,
+            c: sim.choices[currentSimulationStep].map((choiceText, i) => ({
+                t: choiceText,
+                e: i === correctIndex ? feedback : "この状況では、より適切な選択肢があります。"
+            })),
+            a: correctIndex
+        };
+        collectedExplanations.push(explanationData);
+
 
         currentSimulationStep++;
         if (currentSimulationStep < sim.steps.length) {
-            setTimeout(displaySimulationStep, 2000); // 2秒後に次のステップへ
+            setTimeout(displaySimulationStep, 2000);
         } else {
             nextSimulationButton.classList.remove('hidden');
         }
@@ -609,10 +650,25 @@ input[type="text"] {
     // 復習画面表示
     function showReview() {
         reviewContent.innerHTML = '';
-        collectedExplanations.forEach(item => {
+        // Setに変換して重複を削除してから表示
+        const uniqueQuestions = [...new Set(collectedExplanations)];
+
+        uniqueQuestions.forEach(item => {
             const div = document.createElement('div');
             div.classList.add('review-item');
-            div.innerHTML = `<h3>Q. ${item.q}</h3><p>${item.ex}</p>`;
+            
+            let choicesHtml = '';
+            item.c.forEach((choice, index) => {
+                const isCorrect = index === item.a;
+                choicesHtml += `
+                    <div class="review-choice ${isCorrect ? 'correct' : 'incorrect'}">
+                        <div class="review-choice-text">${choice.t}</div>
+                        <div class="review-explanation">${choice.e}</div>
+                    </div>
+                `;
+            });
+
+            div.innerHTML = `<h3>Q. ${item.q}</h3>${choicesHtml}`;
             reviewContent.appendChild(div);
         });
         showScreen('review-screen');
